@@ -54,11 +54,18 @@ int value = 0;
 
 void nukeeeprom(void) {
 	initTaskList();		// stop any currently running background tasks
+#if defined(MSP430_VERYLOWMEM)
+	eerase();
+#else
 	int addr = STARTDB;
 	while (addr <= ENDDB) {
 		if (eeread(addr) != EMPTY) eewrite(addr, EMPTY);
 		addr++;
 	}
+#endif
+#if defined(MSP430_FLASH_CACHE)
+	flushcache();
+#endif
 }
 
 
@@ -77,6 +84,10 @@ void cmd_boot(void) {
 	//
 	REG_RSTC_CR = (RSTC_CR_PROCRST | RSTC_CR_PERRST | RSTC_CR_EXTRST | RSTC_CR_KEY(0xA5));
 	while(1);
+}
+#elif defined(MSP430_BUILD)
+void cmd_boot(void) {
+	WDTCTL = 0xDEAD;
 }
 #else
 void cmd_boot(void) {oops('boot');}
@@ -310,7 +321,14 @@ numvar retval = 0;
 	else if (sym == s_rm) {		// rm "sym" or rm *
 		getsym();
 		if (sym == s_script_eeprom) {
+#if defined(MSP430_VERYLOWMEM)
+			unexpected(M_id);
+#else
 			eraseentry(idbuf);
+#endif
+#if defined(MSP430_FLASH_CACHE)
+			flushcache();
+#endif
 		} 
 #if !defined(TINY_BUILD)
 		else if (sym == s_mul) nukeeeprom();

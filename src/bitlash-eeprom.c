@@ -199,6 +199,10 @@ char id[IDLEN+1];			// buffer for id
 		eewrite(addr, 0);
 	}
 
+#if defined(MSP430_FLASH_CACHE)
+	flushcache();
+#endif
+
 	msgpl(M_saved);
 }
 

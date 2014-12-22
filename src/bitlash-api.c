@@ -58,7 +58,7 @@ void initBitlash(unsigned long baud) {
 	beginSerial(baud);
 #endif
 
-#if defined(ARM_BUILD)
+#if defined(ARM_BUILD) || defined(MSP430_FLASH_CACHE)
 	eeinit();
 #endif
 

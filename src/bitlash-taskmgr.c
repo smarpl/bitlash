@@ -37,7 +37,13 @@
 
 
 // Background task manager
+#if defined(MSP430_LOWMEM)
+#define NUMTASKS 4
+#elif defined(MSP430_VERYLOWMEM)
+#define NUMTASKS 2
+#else
 #define NUMTASKS 10
+#endif
 byte background;
 byte suspendBackground;
 byte curtask;

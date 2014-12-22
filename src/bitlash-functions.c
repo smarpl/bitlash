@@ -175,7 +175,12 @@ numvar func_snooze(void) { reqargs(1); snooze(arg1); return 0; }
 numvar func_delay(void) { reqargs(1); delay(arg1); return 0; }
 
 #if !defined(TINY_BUILD)
-numvar func_setBaud(void) { reqargs(2); setBaud(arg1, arg2); return 0; }
+numvar func_setBaud(void) {
+	reqargs(2);
+#ifdef SOFTWARE_SERIAL_TX
+	setBaud(arg1, arg2);
+#endif
+	return 0; }
 #endif
 
 //numvar func_map(void) { reqargs(5); return map(arg1, arg2, arg3, arg4, arg5); }
@@ -381,12 +386,6 @@ const bitlash_function function_table[] PROGMEM = {
  };
 #endif
 
-// Enable USER_FUNCTIONS to include the add_bitlash_function() extension mechanism
-// This costs about 256 bytes
-//
-#if !defined(TINY_BUILD)
-#define USER_FUNCTIONS
-#endif
 
 #ifdef USER_FUNCTIONS
 #define MAX_USER_FUNCTIONS 20		// increase this if needed, but keep free() > 200 ish

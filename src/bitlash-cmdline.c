@@ -43,7 +43,7 @@ char lbuf[LBUFLEN];
 
 // Help text
 //
-#if !defined(TINY_BUILD)
+#if !defined(TINY_BUILD) && !defined(MSP430_BUILD)
 const prog_char helptext[] PROGMEM = { "http://bitlash.net\r\nSee LICENSE for license\r\nPins: d0-22,a0-22  Variables: a-z, 32 bit long integers\r\nOperators: + - * / ( ) < <= > >= == != << >> ! ^ & | ++ -- :=\r\nCommands: \0" };
 #else
 const prog_char helptext[] PROGMEM = { "http://bitlash.net\r\n\0" };
@@ -75,19 +75,21 @@ void cmd_help(void) {
 #endif
 	showdict(functiondict);
 	speol();
+#if defined(USER_FUNCTIONS)
 	show_user_functions();
 	speol();
+#endif
 	void cmd_ls(void);
 	cmd_ls();
 }
 
 
 void prompt(void) {
-char buf[IDLEN+1];
 
-#if defined(TINY_BUILD)
+#if defined(TINY_BUILD) || defined(MSP430_VERYLOWMEM)
 	msgp(M_prompt);
 #else
+	char buf[IDLEN+1];
 	// Run the script named "prompt" if there is one else print "> "
 	strncpy_P(buf, getmsg(M_promptid), IDLEN);	// get the name "prompt" in our cmd buf
 	if (findscript(buf)) doCommand(buf);

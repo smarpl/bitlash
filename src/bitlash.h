@@ -33,6 +33,13 @@
 	OTHER DEALINGS IN THE SOFTWARE.
 
 ***/
+
+/***
+ *
+ MSP430 port  (C) 2014 smarpl.com
+
+ ***/
+
 #ifndef _BITLASH_H
 #define _BITLASH_H
 
@@ -40,6 +47,8 @@
 #define UNIX_BUILD 1
 #elif defined(__SAM3X8E__)
 #define ARM_BUILD 1
+#elif defined(__MSP430__)
+#define MSP430_BUILD 1
 #else
 #define AVR_BUILD 1
 #endif
@@ -52,7 +61,12 @@
 #include <avr/wdt.h>
 #endif
 
-#if defined(AVR_BUILD) || defined(ARM_BUILD)
+#if defined(MSP430_BUILD)
+#include "avr/pgmspace.h"
+#define strncpy_P(dest, src, size) strncpy((dest), (src), (size))
+#endif
+
+#if defined(AVR_BUILD) || defined(ARM_BUILD) || defined(MSP430_BUILD)
 #include "string.h"
 #include "ctype.h"
 #include "setjmp.h"
@@ -415,8 +429,47 @@ unsigned long millis(void);
 #endif
 
 
+#ifdef MSP430_BUILD
+
+#if defined(__MSP430G2553__)
+#define MSP430_VERYLOWMEM
+#define E2END 0xBF
+
+#elif defined(__MSP430FR5739__)
+#define MSP430_LOWMEM
+#define MSP430_FRAM
+#define FRAM_USERDATA_START 0xFE00
+#define E2END 0x17f
+
+#elif defined(__MSP430F5529__)
+#define E2END 0x17f
+
+#else
+#error this mcu is not supported yet
+#endif
+
+#if !defined(MSP430_LOWMEM) && !defined(MSP430_VERYLOWMEM)
+#define MSP430_FLASH_CACHE
+#endif
+
+#if defined(MSP430_VERYLOWMEM)
+#undef MINIMUM_FREE_RAM
+#define MINIMUM_FREE_RAM 20
+#define NUMVARS 8
+#endif // MSP430_VERYLOWMEM
+
+#if defined(MSP430_LOWMEM)
+#undef MINIMUM_FREE_RAM
+#define MINIMUM_FREE_RAM 20
+#define NUMVARS 12
+#endif // MSP430_LOWMEM
+
+#undef SOFTWARE_SERIAL_TX
+
+#endif // MSP430_BUILD
+
 // numvar is 32 bits on Arduino and 16 bits elsewhere
-#if (defined(ARDUINO_BUILD) || defined(UNIX_BUILD)) && !defined(TINY_BUILD)
+#if (defined(ARDUINO_BUILD) || defined(UNIX_BUILD)) && !defined(TINY_BUILD) && !defined(MSP430_VERYLOWMEM)
 typedef long int numvar;
 typedef unsigned long int unumvar;
 #else
@@ -478,7 +531,12 @@ void initlbuf(void);
 #endif
 
 // String value buffer size
+#ifdef MSP430_VERYLOWMEM
+#define STRVALSIZE 60
+#else
 #define STRVALSIZE 120
+#endif
+
 #define STRVALLEN (STRVALSIZE-1)
 #define LBUFLEN STRVALSIZE
 
@@ -528,10 +586,19 @@ void missing(byte);
 
 /////////////////////////////////////////////
 // bitlash-functions.c
-//
-typedef numvar (*bitlash_function)(void);
-void show_user_functions(void);
 
+// Enable USER_FUNCTIONS to include the add_bitlash_function() extension mechanism
+// This costs about 256 bytes
+//
+#if !defined(TINY_BUILD) && !defined(MSP430_VERYLOWMEM)
+#define USER_FUNCTIONS
+#endif
+
+
+typedef numvar (*bitlash_function)(void);
+#if defined(USER_FUNCTIONS)
+void show_user_functions(void);
+#endif
 void dofunctioncall(byte);
 numvar func_free(void);
 void make_beep(unumvar, unumvar, unumvar);
@@ -604,6 +671,18 @@ extern byte suspendBackground;
 #if defined(AVR_BUILD)
 void eewrite(int, byte) __attribute__((noinline));
 byte eeread(int) __attribute__((noinline));
+
+#elif defined(MSP430_BUILD)
+void eewrite(int, byte);
+byte eeread(int);
+
+#if defined(MSP430_FLASH_CACHE)
+	void flushcache();
+	void eeinit(void);
+#else
+	void eerase(void);
+#endif
+
 
 #elif defined(ARM_BUILD)
 void eewrite(int, byte);

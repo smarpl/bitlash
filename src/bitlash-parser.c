@@ -96,7 +96,7 @@ typedef void (*tokenhandler)(void);
 void skpwhite(void), parsenum(void), parseid(void), eof(void), badsym(void);
 void chrconst(void), litsym(void), parseop(void);
 
-tokenhandler tokenhandlers[TOKENTYPES] = {
+const tokenhandler tokenhandlers[TOKENTYPES] = {
 	skpwhite,		// 0: whitespace -> skip
 	parsenum,		// 1: digit -> number
 	parseid,		// 2: letter -> identifier
@@ -192,6 +192,8 @@ void tb(void) {		// print a mini-trace
 ///
 #if defined(MEGA) || defined(UNIX_BUILD) || defined(ARM_BUILD)
 #define VSTACKLEN 256
+#elif defined(MSP430_VERYLOWMEM)
+#define VSTACKLEN 16
 #else
 #define VSTACKLEN 64
 #endif
@@ -199,8 +201,9 @@ byte vsptr;			  		// value stack pointer
 numvar *arg;				// argument frame pointer
 numvar vstack[VSTACKLEN];  	// value stack
 
-
+#if !defined(MSP430_VERYLOWMEM)
 #define STRING_POOL
+#endif
 ////////////////////
 ///
 ///	String Pool
@@ -293,6 +296,14 @@ numvar getarg(numvar which) {
 	return arg[-which];
 }
 
+numvar isstring(void) {					// isstr() for Bitlash functions
+	// we are interested in the type of args in our
+	// parent's stack frame, the caller of isstr()
+	numvar *parentarg = (numvar *) arg[3];
+	return ((parentarg[2] & (1<<(getarg(1)-1))) != 0);
+}
+
+
 #if defined(STRING_POOL)
 numvar isstringarg(numvar which) {		// isstringarg() api for C user functions
 	return ((arg[2] & (1<<(which-1))) != 0);
@@ -301,12 +312,6 @@ numvar isstringarg(numvar which) {		// isstringarg() api for C user functions
 //	Bitlash test function for isstr():
 //	function stringy {i=1;while (i<=arg(0)) {print i,arg(i),isstr(i);i++}}
 
-numvar isstring(void) {					// isstr() for Bitlash functions
-	// we are interested in the type of args in our
-	// parent's stack frame, the caller of isstr()
-	numvar *parentarg = (numvar *) arg[3];
-	return ((parentarg[2] & (1<<(getarg(1)-1))) != 0);
-}
 
 numvar getstringarg(numvar which) {
 	if (!isstringarg(which)) expected(M_string);
@@ -612,7 +617,9 @@ void parseid(void) {
 	else if (findpinname(idbuf)) {;}		// sym and symval are set in findpinname
 #endif
 
+#ifdef USER_FUNCTIONS
 	else if (find_user_function(idbuf)) sym = s_nfunct;
+#endif
 
 	else findscript(idbuf);
 }
